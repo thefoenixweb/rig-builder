@@ -36,5 +36,43 @@ describe("rigStore (Base Nodes)", () => {
     const nodes = useRigStore.getState().nodes;
     expect(nodes["child-1"]!.parentId).toBeNull();
   });
+
+  it("should set constraint type on a node", () => {
+    useRigStore.getState().addNode("node-1", { x: 0, y: 0, z: 0 });
+    
+    useRigStore.getState().setConstraintType("node-1", "spinner");
+    
+    let nodes = useRigStore.getState().nodes;
+    expect(nodes["node-1"]!.constraint).toBe("spinner");
+
+    useRigStore.getState().setConstraintType("node-1", "bender");
+    nodes = useRigStore.getState().nodes;
+    expect(nodes["node-1"]!.constraint).toBe("bender");
+  });
+
+  it("should add, assign, and remove targets", () => {
+    // Add nodes first
+    useRigStore.getState().addNode("node-1", { x: 0, y: 0, z: 0 });
+    useRigStore.getState().addNode("node-2", { x: 0, y: 5, z: 0 });
+
+    // Add target
+    useRigStore.getState().addTarget("target-1", { x: 5, y: 5, z: 0 });
+    let targets = useRigStore.getState().targets;
+    
+    expect(targets["target-1"]).toBeDefined();
+    expect(targets["target-1"]!.id).toBe("target-1");
+    expect(targets["target-1"]!.position.x).toBe(5);
+    expect(targets["target-1"]!.endEffectorId).toBeNull();
+
+    // Assign target to an end-effector
+    useRigStore.getState().assignTarget("target-1", "node-2");
+    targets = useRigStore.getState().targets;
+    expect(targets["target-1"]!.endEffectorId).toBe("node-2");
+
+    // Remove target
+    useRigStore.getState().removeTarget("target-1");
+    targets = useRigStore.getState().targets;
+    expect(targets["target-1"]).toBeUndefined();
+  });
 });
 

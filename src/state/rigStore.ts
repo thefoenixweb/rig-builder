@@ -5,6 +5,10 @@ interface RigActions {
   addNode: (id: string, position: IVector3) => void;
   parentNode: (childId: string, parentId: string) => void;
   unparentNode: (nodeId: string) => void;
+  setConstraintType: (nodeId: string, constraint: "spinner" | "bender" | "none") => void;
+  addTarget: (id: string, position: IVector3) => void;
+  assignTarget: (targetId: string, endEffectorId: string) => void;
+  removeTarget: (targetId: string) => void;
   reset: () => void;
 }
 
@@ -58,6 +62,48 @@ export const useRigStore = create<IRigState & RigActions>((set) => ({
           [nodeId]: { ...node, parentId: null },
         },
       };
+    }),
+
+  setConstraintType: (nodeId: string, constraint: "spinner" | "bender" | "none") =>
+    set((state) => {
+      const node = state.nodes[nodeId];
+      if (!node) return state;
+      return {
+        nodes: {
+          ...state.nodes,
+          [nodeId]: { ...node, constraint },
+        },
+      };
+    }),
+
+  addTarget: (id: string, position: IVector3) =>
+    set((state) => {
+      const newTarget = {
+        id,
+        position,
+        rotation: { x: 0, y: 0, z: 0 },
+        endEffectorId: null,
+      };
+      return { targets: { ...state.targets, [id]: newTarget } };
+    }),
+
+  assignTarget: (targetId: string, endEffectorId: string) =>
+    set((state) => {
+      const target = state.targets[targetId];
+      if (!target) return state;
+      return {
+        targets: {
+          ...state.targets,
+          [targetId]: { ...target, endEffectorId },
+        },
+      };
+    }),
+
+  removeTarget: (targetId: string) =>
+    set((state) => {
+      const newTargets = { ...state.targets };
+      delete newTargets[targetId];
+      return { targets: newTargets };
     }),
 
   reset: () => set(() => initialState),
