@@ -10,6 +10,13 @@ export interface ITransform {
   scale: IVector3;
 }
 
+export interface IMeshParameters {
+  jointRadius: number;
+  jointThickness: number;
+  armRadius: number;
+  color: string;
+}
+
 export interface INode {
   id: string;
   name: string;
@@ -19,6 +26,7 @@ export interface INode {
   constraint: "spinner" | "bender" | "none";
   min: number;
   max: number;
+  meshParameters: IMeshParameters;
 }
 
 export interface ITarget {

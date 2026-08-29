@@ -33,9 +33,15 @@ export const useRigStore = create<IRigState & RigActions>((set) => ({
         parentId: null,
         offset: { position, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
         rotation: { position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
-        constraint: "none",
+        constraint: "bender", // Default to bender
         min: -Math.PI,
         max: Math.PI,
+        meshParameters: {
+          jointRadius: 1,
+          jointThickness: 1,
+          armRadius: 0.5,
+          color: "#aaaaaa"
+        }
       };
       return { nodes: { ...state.nodes, [id]: newNode } };
     }),
