@@ -6,6 +6,7 @@ interface RigActions {
   parentNode: (childId: string, parentId: string) => void;
   unparentNode: (nodeId: string) => void;
   setConstraintType: (nodeId: string, constraint: "spinner" | "bender" | "none") => void;
+  setNodeRotation: (nodeId: string, axis: "x" | "y" | "z", value: number) => void;
   addTarget: (id: string, position: IVector3) => void;
   assignTarget: (targetId: string, endEffectorId: string) => void;
   removeTarget: (targetId: string) => void;
@@ -78,6 +79,38 @@ export const useRigStore = create<IRigState & RigActions>((set) => ({
         nodes: {
           ...state.nodes,
           [nodeId]: { ...node, constraint },
+        },
+      };
+    }),
+
+  setNodeRotation: (nodeId: string, axis: "x" | "y" | "z", value: number) =>
+    set((state) => {
+      const node = state.nodes[nodeId];
+      if (!node) return state;
+
+      // Enforce axis constraints
+      let allowed = true;
+      if (node.constraint === "spinner" && axis !== "y") allowed = false;
+      if (node.constraint === "bender" && axis !== "z") allowed = false; 
+
+      if (!allowed) return state;
+
+      // Clamp value between min and max
+      const clampedValue = Math.max(node.min, Math.min(node.max, value));
+
+      return {
+        nodes: {
+          ...state.nodes,
+          [nodeId]: {
+            ...node,
+            rotation: {
+              ...node.rotation,
+              rotation: {
+                ...node.rotation.rotation,
+                [axis]: clampedValue,
+              },
+            },
+          },
         },
       };
     }),

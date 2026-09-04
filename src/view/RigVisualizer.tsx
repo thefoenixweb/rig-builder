@@ -27,11 +27,19 @@ export function RigVisualizer() {
         // Spinner joints look like twisting segments 
         const jointRotation = isBender ? [Math.PI / 2, 0, 0] as [number, number, number] : [0, 0, 0] as [number, number, number];
 
+        // Combine the static structural offset with the dynamic FK rotation
+        const dynamicRot = node.rotation.rotation;
+        const totalRotation: [number, number, number] = [
+          rotation.x + dynamicRot.x,
+          rotation.y + dynamicRot.y,
+          rotation.z + dynamicRot.z
+        ];
+
         return (
           <group
             key={node.id}
             position={[position.x, position.y, position.z]}
-            rotation={[rotation.x, rotation.y, rotation.z]}
+            rotation={totalRotation}
           >
             {/* The Joint (Pivot point) */}
             <mesh rotation={jointRotation}>
@@ -40,10 +48,18 @@ export function RigVisualizer() {
             </mesh>
 
             {/* The Link (Arm segment) - offset by half its length so its base sits exactly on the joint */}
-            <mesh position={[0, length / 2, 0]}>
-              <cylinderGeometry args={[params.armRadius, params.armRadius, length, 16]} />
-              <meshStandardMaterial color={params.color} />
-            </mesh>
+            <group position={[0, length / 2, 0]}>
+              <mesh>
+                <cylinderGeometry args={[params.armRadius, params.armRadius, length, 16]} />
+                <meshStandardMaterial color={params.color} />
+              </mesh>
+              
+              {/* Visual Indicator: A small protrusion to make spinning (twisting) visible */}
+              <mesh position={[params.armRadius, 0, 0]}>
+                <boxGeometry args={[params.armRadius, length * 0.8, params.armRadius / 2]} />
+                <meshStandardMaterial color="#333333" />
+              </mesh>
+            </group>
           </group>
         );
       })}
