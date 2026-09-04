@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useRigStore } from '../state/rigStore';
 
 export function InspectorPanel() {
   const nodes = useRigStore(state => state.nodes);
   const setNodeRotation = useRigStore(state => state.setNodeRotation);
   const setConstraintType = useRigStore(state => state.setConstraintType);
+  const selectedId = useRigStore(state => state.selectedNodeId);
+  const setSelectedId = useRigStore(state => state.setSelectedNode);
 
   const nodeList = Object.values(nodes);
-  const [selectedId, setSelectedId] = useState<string>('');
 
   // Auto-select the first node if nothing is selected and nodes exist
   useEffect(() => {
@@ -15,13 +16,13 @@ export function InspectorPanel() {
       setSelectedId(nodeList[0]!.id);
     } else if (selectedId && !nodes[selectedId]) {
       // If selected node was deleted/doesn't exist
-      setSelectedId('');
+      setSelectedId(null);
     }
-  }, [nodeList, selectedId, nodes]);
+  }, [nodeList, selectedId, nodes, setSelectedId]);
 
   if (nodeList.length === 0) return null;
 
-  const node = nodes[selectedId];
+  const node = nodes[selectedId ?? ''];
 
   return (
     <div style={{ position: 'absolute', top: 20, right: 20, zIndex: 10, background: '#333', color: 'white', padding: 20, borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 15, maxHeight: '80vh', overflowY: 'auto', minWidth: 250 }}>
@@ -30,7 +31,7 @@ export function InspectorPanel() {
 
       <select
         style={{ color: 'black', padding: '5px', borderRadius: '4px' }}
-        value={selectedId}
+        value={selectedId || ""}
         onChange={e => setSelectedId(e.target.value)}
       >
         <option value="" disabled>Select a node...</option>

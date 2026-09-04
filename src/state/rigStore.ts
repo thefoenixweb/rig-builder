@@ -7,13 +7,15 @@ interface RigActions {
   unparentNode: (nodeId: string) => void;
   setConstraintType: (nodeId: string, constraint: "spinner" | "bender" | "none") => void;
   setNodeRotation: (nodeId: string, axis: "x" | "y" | "z", value: number) => void;
+  setNodePosition: (nodeId: string, position: IVector3) => void;
+  setSelectedNode: (id: string | null) => void;
   addTarget: (id: string, position: IVector3) => void;
   assignTarget: (targetId: string, endEffectorId: string) => void;
   removeTarget: (targetId: string) => void;
   reset: () => void;
 }
 
-const initialState: IRigState = {
+const initialState: IRigState & { selectedNodeId: string | null } = {
   nodes: {},
   targets: {},
   followTarget: true,
@@ -21,9 +23,10 @@ const initialState: IRigState = {
   controlSpace: "world",
   eulerRingsVisible: true,
   controlVisible: true,
+  selectedNodeId: null,
 };
 
-export const useRigStore = create<IRigState & RigActions>((set) => ({
+export const useRigStore = create<IRigState & { selectedNodeId: string | null } & RigActions>((set) => ({
   ...initialState,
 
   addNode: (id: string, position: IVector3) =>
@@ -114,6 +117,26 @@ export const useRigStore = create<IRigState & RigActions>((set) => ({
         },
       };
     }),
+
+  setNodePosition: (nodeId: string, position: IVector3) =>
+    set((state) => {
+      const node = state.nodes[nodeId];
+      if (!node) return state;
+      return {
+        nodes: {
+          ...state.nodes,
+          [nodeId]: {
+            ...node,
+            offset: {
+              ...node.offset,
+              position
+            }
+          }
+        }
+      }
+    }),
+
+  setSelectedNode: (id: string | null) => set({ selectedNodeId: id }),
 
   addTarget: (id: string, position: IVector3) =>
     set((state) => {

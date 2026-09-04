@@ -1,8 +1,11 @@
 import React, { useEffect } from 'react';
 import { useRigStore } from '../state/rigStore';
+import { TransformControls } from '@react-three/drei';
 
 export function RigVisualizer() {
   const nodes = useRigStore((state) => Object.values(state.nodes));
+  const stateSelectedId = useRigStore(state => state.selectedNodeId);
+  const setNodePosition = useRigStore(state => state.setNodePosition);
 
   return (
     <>
@@ -35,16 +38,19 @@ export function RigVisualizer() {
           rotation.z + dynamicRot.z
         ];
 
-        return (
+        const isSelected = stateSelectedId === node.id;
+        const canTranslate = node.parentId === null;
+
+        const nodeGroup = (
           <group
             key={node.id}
-            position={[position.x, position.y, position.z]}
+            {...(!isSelected || !canTranslate ? { position: [position.x, position.y, position.z] } : {})}
             rotation={totalRotation}
           >
             {/* The Joint (Pivot point) */}
             <mesh rotation={jointRotation}>
               <cylinderGeometry args={[params.jointRadius, params.jointRadius, params.jointThickness, 32]} />
-              <meshStandardMaterial color="#4488ff" />
+              <meshStandardMaterial color={isSelected ? "#ffaa00" : "#4488ff"} />
             </mesh>
 
             {/* The Link (Arm segment) - offset by half its length so its base sits exactly on the joint */}
@@ -62,6 +68,27 @@ export function RigVisualizer() {
             </group>
           </group>
         );
+
+        if (isSelected && canTranslate) {
+          return (
+            <TransformControls 
+              key={`tc-${node.id}`} 
+              mode="translate"
+              position={[position.x, position.y, position.z]}
+              onMouseUp={(e) => {
+                const target = e?.target as any;
+                const newPos = target?.object?.position || target?.position;
+                if (newPos) {
+                  setNodePosition(node.id, { x: newPos.x, y: newPos.y, z: newPos.z });
+                }
+              }}
+            >
+              {nodeGroup}
+            </TransformControls>
+          );
+        }
+
+        return nodeGroup;
       })}
     </>
   );

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { cascadeTransform, calculateLocalOffset } from "./TransformSystem";
-import { ITransform } from "../types";
+import type { ITransform } from "../types";
 
 describe("TransformSystem", () => {
   const identityTransform: ITransform = {
