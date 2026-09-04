@@ -46,6 +46,10 @@ export function RigVisualizer() {
             key={node.id}
             {...(!isSelected || !canTranslate ? { position: [position.x, position.y, position.z] } : {})}
             rotation={totalRotation}
+            onClick={(e) => {
+              e.stopPropagation();
+              useRigStore.getState().setSelectedNode(node.id);
+            }}
           >
             {/* The Joint (Pivot point) */}
             <mesh rotation={jointRotation}>

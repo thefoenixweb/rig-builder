@@ -10,15 +10,7 @@ export function InspectorPanel() {
 
   const nodeList = Object.values(nodes);
 
-  // Auto-select the first node if nothing is selected and nodes exist
-  useEffect(() => {
-    if (!selectedId && nodeList.length > 0) {
-      setSelectedId(nodeList[0]!.id);
-    } else if (selectedId && !nodes[selectedId]) {
-      // If selected node was deleted/doesn't exist
-      setSelectedId(null);
-    }
-  }, [nodeList, selectedId, nodes, setSelectedId]);
+  // Auto-select logic removed to allow deselection (empty state)
 
   if (nodeList.length === 0) return null;
 

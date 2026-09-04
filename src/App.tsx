@@ -5,7 +5,7 @@ import { RigVisualizer } from './view/RigVisualizer';
 import { useRigStore } from './state/rigStore';
 import { useEffect } from 'react';
 
-import { RigControls } from './view/RigControls';
+import { HierarchyTree } from './ui/HierarchyTree';
 import { InspectorPanel } from './ui/InspectorPanel';
 
 export default function App() {
@@ -37,9 +37,13 @@ export default function App() {
 
   return (
     <>
-      <RigControls />
+      <HierarchyTree />
       <InspectorPanel />
-      <Canvas camera={{ position: [20, 20, 20], fov: 45 }} style={{ width: '100vw', height: '100vh', display: 'block' }}>
+      <Canvas 
+        camera={{ position: [20, 20, 20], fov: 45 }} 
+        style={{ width: '100vw', height: '100vh', display: 'block' }}
+        onPointerMissed={() => useRigStore.getState().setSelectedNode(null)}
+      >
         <color attach="background" args={['#1a1a1a']} />
 
         <ambientLight intensity={0.5} />

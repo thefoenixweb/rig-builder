@@ -3,6 +3,7 @@ import type { IRigState, INode, IVector3 } from "../types.ts";
 
 interface RigActions {
   addNode: (id: string, position: IVector3) => void;
+  removeNode: (nodeId: string) => void;
   parentNode: (childId: string, parentId: string) => void;
   unparentNode: (nodeId: string) => void;
   setConstraintType: (nodeId: string, constraint: "spinner" | "bender" | "none") => void;
@@ -48,6 +49,27 @@ export const useRigStore = create<IRigState & { selectedNodeId: string | null } 
         }
       };
       return { nodes: { ...state.nodes, [id]: newNode } };
+    }),
+
+  removeNode: (nodeId: string) =>
+    set((state) => {
+      const newNodes = { ...state.nodes };
+      delete newNodes[nodeId];
+
+      // Unparent any children that had this node as a parent
+      for (const id in newNodes) {
+        const node = newNodes[id];
+        if (node && node.parentId === nodeId) {
+          newNodes[id] = { ...node, parentId: null };
+        }
+      }
+
+      const newSelectedNodeId = state.selectedNodeId === nodeId ? null : state.selectedNodeId;
+
+      return { 
+        nodes: newNodes,
+        selectedNodeId: newSelectedNodeId
+      };
     }),
 
   parentNode: (childId: string, parentId: string) =>
