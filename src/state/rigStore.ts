@@ -76,10 +76,35 @@ export const useRigStore = create<IRigState & { selectedNodeId: string | null } 
     set((state) => {
       const child = state.nodes[childId];
       if (!child) return state;
+
+      let newMin = child.min;
+      let newMax = child.max;
+      
+      // If it's a bender, apply limits when parented
+      if (child.constraint === "bender") {
+        newMin = -Math.PI / 2;
+        newMax = Math.PI / 2;
+      }
+
+      const clampedRotation = {
+        x: Math.max(newMin, Math.min(newMax, child.rotation.rotation.x)),
+        y: Math.max(newMin, Math.min(newMax, child.rotation.rotation.y)),
+        z: Math.max(newMin, Math.min(newMax, child.rotation.rotation.z)),
+      };
+
       return {
         nodes: {
           ...state.nodes,
-          [childId]: { ...child, parentId },
+          [childId]: { 
+            ...child, 
+            parentId, 
+            min: newMin, 
+            max: newMax,
+            rotation: {
+              ...child.rotation,
+              rotation: clampedRotation
+            }
+          },
         },
       };
     }),
@@ -91,7 +116,7 @@ export const useRigStore = create<IRigState & { selectedNodeId: string | null } 
       return {
         nodes: {
           ...state.nodes,
-          [nodeId]: { ...node, parentId: null },
+          [nodeId]: { ...node, parentId: null, min: -Math.PI, max: Math.PI },
         },
       };
     }),
@@ -100,10 +125,38 @@ export const useRigStore = create<IRigState & { selectedNodeId: string | null } 
     set((state) => {
       const node = state.nodes[nodeId];
       if (!node) return state;
+
+      let newMin = node.min;
+      let newMax = node.max;
+
+      // Apply limits if it's parented and becoming a bender
+      if (node.parentId !== null && constraint === "bender") {
+        newMin = -Math.PI / 2;
+        newMax = Math.PI / 2;
+      } else if (node.parentId === null || constraint !== "bender") {
+        newMin = -Math.PI;
+        newMax = Math.PI;
+      }
+
+      const clampedRotation = {
+        x: Math.max(newMin, Math.min(newMax, node.rotation.rotation.x)),
+        y: Math.max(newMin, Math.min(newMax, node.rotation.rotation.y)),
+        z: Math.max(newMin, Math.min(newMax, node.rotation.rotation.z)),
+      };
+
       return {
         nodes: {
           ...state.nodes,
-          [nodeId]: { ...node, constraint },
+          [nodeId]: { 
+            ...node, 
+            constraint, 
+            min: newMin, 
+            max: newMax,
+            rotation: {
+              ...node.rotation,
+              rotation: clampedRotation
+            }
+          },
         },
       };
     }),
