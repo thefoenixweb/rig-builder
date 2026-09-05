@@ -14,6 +14,9 @@ interface RigActions {
   assignTarget: (targetId: string, endEffectorId: string) => void;
   removeTarget: (targetId: string) => void;
   reset: () => void;
+  setTargetPosition: (targetId: string, position: IVector3) => void;
+  setFollowTarget: (follow: boolean) => void;
+  setMultipleNodeRotations: (updates: Record<string, IVector3>) => void;
 }
 
 const initialState: IRigState & { selectedNodeId: string | null } = {
@@ -241,6 +244,37 @@ export const useRigStore = create<IRigState & { selectedNodeId: string | null } 
       const newTargets = { ...state.targets };
       delete newTargets[targetId];
       return { targets: newTargets };
+    }),
+
+  setTargetPosition: (targetId: string, position: IVector3) =>
+    set((state) => {
+      const target = state.targets[targetId];
+      if (!target) return state;
+      return {
+        targets: {
+          ...state.targets,
+          [targetId]: { ...target, position },
+        },
+      };
+    }),
+
+  setFollowTarget: (follow: boolean) => set({ followTarget: follow }),
+
+  setMultipleNodeRotations: (updates: Record<string, IVector3>) =>
+    set((state) => {
+      const newNodes = { ...state.nodes };
+      for (const [id, newRotation] of Object.entries(updates)) {
+        if (newNodes[id]) {
+          newNodes[id] = {
+            ...newNodes[id],
+            rotation: {
+              ...newNodes[id].rotation,
+              rotation: newRotation,
+            },
+          };
+        }
+      }
+      return { nodes: newNodes };
     }),
 
   reset: () => set(() => initialState),

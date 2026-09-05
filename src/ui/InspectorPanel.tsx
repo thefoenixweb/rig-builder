@@ -7,8 +7,11 @@ export function InspectorPanel() {
   const setConstraintType = useRigStore(state => state.setConstraintType);
   const selectedId = useRigStore(state => state.selectedNodeId);
   const setSelectedId = useRigStore(state => state.setSelectedNode);
+  const targets = useRigStore(state => state.targets);
+  const assignTarget = useRigStore(state => state.assignTarget);
 
   const nodeList = Object.values(nodes);
+  const targetList = Object.values(targets);
 
   // Auto-select logic removed to allow deselection (empty state)
 
@@ -80,6 +83,30 @@ export function InspectorPanel() {
                 disabled={node.constraint === 'spinner'}
               />
             </label>
+          </div>
+
+          <div style={{ marginTop: 10, padding: 10, background: '#444', borderRadius: 4 }}>
+            <strong style={{ fontSize: 12, display: 'block', marginBottom: 5 }}>IK Target Assignment:</strong>
+            <select
+              style={{ width: '100%', padding: 4, borderRadius: 4, color: 'black' }}
+              value={targetList.find(t => t.endEffectorId === node.id)?.id || ""}
+              onChange={e => {
+                const targetId = e.target.value;
+                if (targetId) {
+                  assignTarget(targetId, node.id);
+                } else {
+                  // Unassign from all targets that currently point to this node
+                  targetList.forEach(t => {
+                    if (t.endEffectorId === node.id) assignTarget(t.id, null as any); // Type safety override, need to allow null in assignTarget
+                  });
+                }
+              }}
+            >
+              <option value="">None (Not an End Effector)</option>
+              {targetList.map(t => (
+                <option key={t.id} value={t.id}>{t.id}</option>
+              ))}
+            </select>
           </div>
         </div>
       )}

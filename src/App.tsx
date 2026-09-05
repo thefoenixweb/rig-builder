@@ -7,6 +7,9 @@ import { useEffect } from 'react';
 
 import { HierarchyTree } from './ui/HierarchyTree';
 import { InspectorPanel } from './ui/InspectorPanel';
+import { Toolbar } from './ui/Toolbar';
+import { RigTargetView } from './view/RigTargetView';
+import { IKManager } from './view/IKManager';
 
 export default function App() {
   // Inject mock nodes to prove the visualizer works
@@ -37,6 +40,7 @@ export default function App() {
 
   return (
     <>
+      <Toolbar />
       <HierarchyTree />
       <InspectorPanel />
       <Canvas 
@@ -57,6 +61,8 @@ export default function App() {
         />
 
         <RigVisualizer />
+        <RigTargetView />
+        <IKManager />
 
         <OrbitControls makeDefault />
       </Canvas>
