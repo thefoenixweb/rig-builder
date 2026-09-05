@@ -10,16 +10,19 @@ interface RigActions {
   setNodeRotation: (nodeId: string, axis: "x" | "y" | "z", value: number) => void;
   setNodePosition: (nodeId: string, position: IVector3) => void;
   setSelectedNode: (id: string | null) => void;
+  setSelectedTarget: (id: string | null) => void;
   addTarget: (id: string, position: IVector3) => void;
   assignTarget: (targetId: string, endEffectorId: string) => void;
   removeTarget: (targetId: string) => void;
   reset: () => void;
   setTargetPosition: (targetId: string, position: IVector3) => void;
+  setTargetRotation: (targetId: string, axis: "x" | "y" | "z", value: number) => void;
   setFollowTarget: (follow: boolean) => void;
   setMultipleNodeRotations: (updates: Record<string, IVector3>) => void;
+  setIsDragging: (isDragging: boolean) => void;
 }
 
-const initialState: IRigState & { selectedNodeId: string | null } = {
+const initialState: IRigState = {
   nodes: {},
   targets: {},
   followTarget: true,
@@ -28,9 +31,11 @@ const initialState: IRigState & { selectedNodeId: string | null } = {
   eulerRingsVisible: true,
   controlVisible: true,
   selectedNodeId: null,
+  selectedTargetId: null,
+  isDragging: false,
 };
 
-export const useRigStore = create<IRigState & { selectedNodeId: string | null } & RigActions>((set) => ({
+export const useRigStore = create<IRigState & RigActions>((set) => ({
   ...initialState,
 
   addNode: (id: string, position: IVector3) =>
@@ -214,7 +219,11 @@ export const useRigStore = create<IRigState & { selectedNodeId: string | null } 
       }
     }),
 
-  setSelectedNode: (id: string | null) => set({ selectedNodeId: id }),
+  setSelectedNode: (id: string | null) =>
+    set({ selectedNodeId: id, selectedTargetId: null }),
+
+  setSelectedTarget: (id: string | null) =>
+    set({ selectedTargetId: id, selectedNodeId: null }),
 
   addTarget: (id: string, position: IVector3) =>
     set((state) => {
@@ -229,14 +238,16 @@ export const useRigStore = create<IRigState & { selectedNodeId: string | null } 
 
   assignTarget: (targetId: string, endEffectorId: string) =>
     set((state) => {
-      const target = state.targets[targetId];
-      if (!target) return state;
-      return {
-        targets: {
-          ...state.targets,
-          [targetId]: { ...target, endEffectorId },
-        },
-      };
+      const newTargets = { ...state.targets };
+      if (newTargets[targetId]) {
+        // When assigned, it becomes a child of the end effector, so reset its local offset to 0,0,0
+        newTargets[targetId] = { 
+          ...newTargets[targetId], 
+          endEffectorId,
+          position: endEffectorId ? { x: 0, y: 0, z: 0 } : newTargets[targetId].position
+        };
+      }
+      return { targets: newTargets };
     }),
 
   removeTarget: (targetId: string) =>
@@ -254,6 +265,21 @@ export const useRigStore = create<IRigState & { selectedNodeId: string | null } 
         targets: {
           ...state.targets,
           [targetId]: { ...target, position },
+        },
+      };
+    }),
+
+  setTargetRotation: (targetId: string, axis: "x" | "y" | "z", value: number) =>
+    set((state) => {
+      const target = state.targets[targetId];
+      if (!target) return state;
+      return {
+        targets: {
+          ...state.targets,
+          [targetId]: { 
+            ...target, 
+            rotation: { ...target.rotation, [axis]: value } 
+          },
         },
       };
     }),
@@ -277,6 +303,7 @@ export const useRigStore = create<IRigState & { selectedNodeId: string | null } 
       return { nodes: newNodes };
     }),
 
+  setIsDragging: (isDragging: boolean) => set({ isDragging }),
+
   reset: () => set(() => initialState),
 }));
-

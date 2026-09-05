@@ -46,7 +46,12 @@ export default function App() {
       <Canvas 
         camera={{ position: [20, 20, 20], fov: 45 }} 
         style={{ width: '100vw', height: '100vh', display: 'block' }}
-        onPointerMissed={() => useRigStore.getState().setSelectedNode(null)}
+        onPointerMissed={() => {
+          if (!useRigStore.getState().isDragging) {
+            useRigStore.getState().setSelectedNode(null);
+            useRigStore.getState().setSelectedTarget(null);
+          }
+        }}
       >
         <color attach="background" args={['#1a1a1a']} />
 

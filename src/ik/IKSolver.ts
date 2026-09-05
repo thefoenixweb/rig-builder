@@ -1,4 +1,4 @@
-import { Object3D, Vector3, Matrix4, Quaternion, Euler } from 'three';
+import { Object3D, Vector3, Matrix4, Quaternion, Euler, Scene } from 'three';
 import { useRigStore } from '../state/rigStore';
 import type { IRigState, INode, IVector3 } from '../types';
 
@@ -58,7 +58,7 @@ export class IKSolver {
     this.rootObjects.forEach(root => root.updateMatrixWorld(true));
   }
 
-  public solve(iterations: number = 10) {
+  public solve(iterations: number = 10, scene?: Scene) {
     const state = useRigStore.getState();
     if (!state.followTarget) return;
 
@@ -76,7 +76,15 @@ export class IKSolver {
       const effectorObj = this.tipObjects.get(target.endEffectorId);
       if (!effectorObj) return;
 
-      const targetPos = new Vector3(target.position.x, target.position.y, target.position.z);
+      // targetPos is now in World Space directly
+      let targetPos = new Vector3(target.position.x, target.position.y, target.position.z);
+      
+      if (scene) {
+        const targetMesh = scene.getObjectByName(target.id);
+        if (targetMesh) {
+          targetMesh.getWorldPosition(targetPos);
+        }
+      }
 
       // Build chain from end effector up to root
       const chain: string[] = [];
@@ -111,7 +119,13 @@ export class IKSolver {
           const rotationQuat = new Quaternion().setFromAxisAngle(cross, angle);
 
           // Apply rotation in world space, convert back to local space
-          jointObj.quaternion.premultiply(rotationQuat);
+          const parentQuat = new Quaternion();
+          if (jointObj.parent) {
+            jointObj.parent.getWorldQuaternion(parentQuat);
+          }
+          const parentQuatInv = parentQuat.clone().invert();
+          const qNewLocal = parentQuatInv.multiply(rotationQuat).multiply(parentQuat).multiply(jointObj.quaternion);
+          jointObj.quaternion.copy(qNewLocal);
 
           // Constrain angles based on node state
           const localEuler = new Euler().setFromQuaternion(jointObj.quaternion, "XYZ");

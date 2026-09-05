@@ -39,10 +39,12 @@ export interface ITarget {
 export interface IRigState {
   nodes: Record<string, INode>;
   targets: Record<string, ITarget>;
+  selectedNodeId: string | null;
+  selectedTargetId: string | null;
   followTarget: boolean;
   controlMode: "translate" | "rotate";
   controlSpace: "world" | "local";
   eulerRingsVisible: boolean;
   controlVisible: boolean;
+  isDragging: boolean;
 }
-

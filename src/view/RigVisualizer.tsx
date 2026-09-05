@@ -44,7 +44,9 @@ const RigNodeView = ({ node, allNodes }: { node: INode, allNodes: INode[] }) => 
       rotation={totalRotation}
       onClick={(e) => {
         e.stopPropagation();
-        useRigStore.getState().setSelectedNode(node.id);
+        if (!useRigStore.getState().isDragging) {
+          useRigStore.getState().setSelectedNode(node.id);
+        }
       }}
     >
       {/* The Joint (Pivot point) */}
@@ -68,7 +70,7 @@ const RigNodeView = ({ node, allNodes }: { node: INode, allNodes: INode[] }) => 
       </group>
 
       {/* Render children at the TIP of the arm so they are mechanically attached */}
-      <group position={[0, length, 0]}>
+      <group position={[0, length, 0]} name={`tip-${node.id}`}>
         {children.map(child => (
           <RigNodeView key={child.id} node={child} allNodes={allNodes} />
         ))}
@@ -82,7 +84,9 @@ const RigNodeView = ({ node, allNodes }: { node: INode, allNodes: INode[] }) => 
         key={`tc-${node.id}`} 
         mode="translate"
         position={[position.x, position.y, position.z]}
+        onMouseDown={() => useRigStore.getState().setIsDragging(true)}
         onMouseUp={(e) => {
+          useRigStore.getState().setIsDragging(false);
           const target = e?.target as any;
           const newPos = target?.object?.position || target?.position;
           if (newPos) {
