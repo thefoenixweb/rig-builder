@@ -20,7 +20,7 @@ export function RigTargetView() {
     <>
       {targetsToRender.map((target) => {
         const isSelected = selectedTargetId === target.id;
-        
+
         if (isSelected) {
           return (
             <TransformControls
@@ -45,8 +45,8 @@ export function RigTargetView() {
                 }
               }}
             >
-              <mesh 
-                name={target.id} 
+              <group
+                name={target.id}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (!useRigStore.getState().isDragging) {
@@ -54,17 +54,34 @@ export function RigTargetView() {
                   }
                 }}
               >
-                <sphereGeometry args={[0.5, 16, 16]} />
-                <meshStandardMaterial color="red" emissive="red" emissiveIntensity={0.8} transparent opacity={0.8} />
-              </mesh>
+                {/* Center point / Gizmo anchor (Where the arm connects) */}
+                <mesh>
+                  <sphereGeometry args={[0.5, 16, 16]} />
+                  <meshStandardMaterial color="red" emissive="red" emissiveIntensity={0.8} transparent opacity={0.8} />
+                </mesh>
+
+                {/* The Target's Joint */}
+                <mesh rotation={[Math.PI / 2, 0, 0]}>
+                  <cylinderGeometry args={[1, 1, 1, 32]} />
+                  <meshStandardMaterial color="#ffaa00" />
+                </mesh>
+
+                {/* The Target's Arm facing downwards  */}
+                <group position={[0, -2, 0]}>
+                  <mesh>
+                    <cylinderGeometry args={[0.5, 0.5, 4, 16]} />
+                    <meshStandardMaterial color="#aaaaaa" />
+                  </mesh>
+                </group>
+              </group>
             </TransformControls>
           );
         }
 
         return (
-          <mesh 
+          <group
             key={target.id}
-            name={target.id} 
+            name={target.id}
             position={[target.position.x, target.position.y, target.position.z]}
             rotation={[target.rotation.x, target.rotation.y, target.rotation.z]}
             onClick={(e) => {
@@ -74,9 +91,26 @@ export function RigTargetView() {
               }
             }}
           >
-            <sphereGeometry args={[0.5, 16, 16]} />
-            <meshStandardMaterial color="red" emissive="red" emissiveIntensity={0.5} transparent opacity={0.8} />
-          </mesh>
+            {/* Center point / Gizmo anchor */}
+            <mesh>
+              <sphereGeometry args={[0.5, 16, 16]} />
+              <meshStandardMaterial color="red" emissive="red" emissiveIntensity={0.5} transparent opacity={0.8} />
+            </mesh>
+
+            {/* The Target's Joint */}
+            <mesh rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[1, 1, 1, 32]} />
+              <meshStandardMaterial color="#4488ff" />
+            </mesh>
+
+            {/* The Target's Arm facing downwards */}
+            <group position={[0, -2, 0]}>
+              <mesh>
+                <cylinderGeometry args={[0.5, 0.5, 4, 16]} />
+                <meshStandardMaterial color="#aaaaaa" />
+              </mesh>
+            </group>
+          </group>
         );
       })}
     </>
