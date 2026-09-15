@@ -18,8 +18,8 @@ export function IKManager() {
     // fkDirty processing moved to RigVisualizer useEffect to guarantee React props are flushed
 
     if (followTarget && !state.isFkDragging) {
-      // Run 5 iterations per frame for a smooth but stable approach
-      solver.solve(5, scene); 
+      // Run 15 iterations per frame so the arm sticks tightly to the target and doesn't lag behind during animations
+      solver.solve(15, scene); 
     }
 
   });

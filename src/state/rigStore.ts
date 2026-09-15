@@ -23,6 +23,13 @@ interface RigActions {
   setIsFkDragging: (isFkDragging: boolean) => void;
   clearFkDirty: () => void;
   setGripAmount: (nodeId: string, amount: number) => void;
+  
+  // Animation System Actions
+  addActionToTarget: (targetId: string, type: "move" | "grip") => void;
+  removeActionFromTarget: (targetId: string, actionIndex: number) => void;
+  clearTargetActions: (targetId: string) => void;
+  setTargetAnimating: (targetId: string, isAnimating: boolean) => void;
+  setTargetActionIndex: (targetId: string, index: number) => void;
 }
 
 const initialState: IRigState = {
@@ -227,7 +234,7 @@ export const useRigStore = create<IRigState & RigActions>((set) => ({
       for (const targetId in newTargets) {
         const target = newTargets[targetId];
         // If a target is assigned to any node, we assume it belongs to the arm being dragged
-        if (target.endEffectorId) {
+        if (target?.endEffectorId) {
           newTargets[targetId] = {
             ...target,
             position: {
@@ -268,6 +275,9 @@ export const useRigStore = create<IRigState & RigActions>((set) => ({
         position,
         rotation: { x: 0, y: 0, z: 0 },
         endEffectorId: null,
+        actions: [],
+        isAnimating: false,
+        currentActionIndex: 0,
       };
       return { targets: { ...state.targets, [id]: newTarget } };
     }),
@@ -353,4 +363,102 @@ export const useRigStore = create<IRigState & RigActions>((set) => ({
     }),
 
   reset: () => set(() => initialState),
+
+  // Animation System Implementation
+  addActionToTarget: (targetId: string, type: "move" | "grip" | "delay") =>
+    set((state) => {
+      const target = state.targets[targetId];
+      if (!target) return state;
+
+      const newAction: any = {
+        id: Math.random().toString(36).substring(2, 9),
+        type,
+      };
+
+      if (type === "move") {
+        newAction.position = { ...target.position };
+        newAction.rotation = { ...target.rotation };
+      } else if (type === "grip") {
+        let gripAmount: number | undefined = undefined;
+        if (target.endEffectorId) {
+          const effectorNode = state.nodes[target.endEffectorId];
+          if (effectorNode && effectorNode.type === "gripper") {
+            gripAmount = effectorNode.gripAmount;
+          } else {
+            for (const node of Object.values(state.nodes)) {
+              if (node.parentId === target.endEffectorId && node.type === "gripper") {
+                gripAmount = node.gripAmount;
+                break;
+              }
+            }
+          }
+        }
+        newAction.gripAmount = gripAmount ?? 0;
+      }
+
+      return {
+        targets: {
+          ...state.targets,
+          [targetId]: {
+            ...target,
+            actions: [...target.actions, newAction],
+          },
+        },
+      };
+    }),
+
+  removeActionFromTarget: (targetId: string, actionIndex: number) =>
+    set((state) => {
+      const target = state.targets[targetId];
+      if (!target) return state;
+      const newActions = [...target.actions];
+      newActions.splice(actionIndex, 1);
+      return {
+        targets: {
+          ...state.targets,
+          [targetId]: {
+            ...target,
+            actions: newActions,
+            currentActionIndex: Math.min(target.currentActionIndex, Math.max(0, newActions.length - 1)),
+            isAnimating: newActions.length === 0 ? false : target.isAnimating,
+          },
+        },
+      };
+    }),
+
+  clearTargetActions: (targetId: string) =>
+    set((state) => {
+      const target = state.targets[targetId];
+      if (!target) return state;
+      return {
+        targets: {
+          ...state.targets,
+          [targetId]: { ...target, actions: [], isAnimating: false, currentActionIndex: 0 },
+        },
+      };
+    }),
+
+  setTargetAnimating: (targetId: string, isAnimating: boolean) =>
+    set((state) => {
+      const target = state.targets[targetId];
+      if (!target || target.actions.length === 0) return state;
+      return {
+        targets: {
+          ...state.targets,
+          [targetId]: { ...target, isAnimating },
+        },
+      };
+    }),
+
+  setTargetActionIndex: (targetId: string, index: number) =>
+    set((state) => {
+      const target = state.targets[targetId];
+      if (!target) return state;
+      return {
+        targets: {
+          ...state.targets,
+          [targetId]: { ...target, currentActionIndex: index },
+        },
+      };
+    }),
 }));

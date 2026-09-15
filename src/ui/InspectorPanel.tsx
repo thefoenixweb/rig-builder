@@ -151,8 +151,56 @@ export function InspectorPanel() {
 
       {target && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: 10, background: '#222', borderRadius: 4 }}>
+          {(() => {
+            let targetGripNodeId: string | null = null;
+            if (target.endEffectorId) {
+              const effectorNode = nodes[target.endEffectorId];
+              if (effectorNode?.type === "gripper") {
+                targetGripNodeId = effectorNode.id;
+              } else {
+                for (const n of Object.values(nodes)) {
+                  if (n.parentId === target.endEffectorId && n.type === "gripper") {
+                    targetGripNodeId = n.id;
+                    break;
+                  }
+                }
+              }
+            }
+            if (targetGripNodeId) {
+              const gripNode = nodes[targetGripNodeId];
+              if (!gripNode) return null;
+              return (
+                <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #555' }}>
+                  <strong style={{ fontSize: 12 }}>Attached Gripper:</strong>
+                  <label style={{ display: 'flex', flexDirection: 'column', fontSize: 12, marginTop: 5 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <span>Grip Amount (Close &rarr; Open)</span>
+                      <span>{(gripNode.gripAmount ?? 0).toFixed(2)}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0} max={1} step={0.01}
+                      value={gripNode.gripAmount ?? 0}
+                      onChange={e => useRigStore.getState().setGripAmount(gripNode.id, parseFloat(e.target.value))}
+                    />
+                  </label>
+                </div>
+              );
+            }
+            return null;
+          })()}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <strong>Target Offset (Position):</strong>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                useRigStore.getState().removeTarget(target.id);
+                setSelectedTarget(null);
+              }}
+              style={{ color: 'white', background: '#d32f2f', border: 'none', borderRadius: 3, padding: '2px 8px', cursor: 'pointer' }}
+            >
+              Delete Target
+            </button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 5, fontSize: 12 }}>
             <label style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -185,6 +233,66 @@ export function InspectorPanel() {
               <span>Z: {(target.rotation.z * 180 / Math.PI).toFixed(1)}°</span>
               <input type="range" min={-Math.PI} max={Math.PI} step={0.01} value={target.rotation.z} onChange={e => setTargetRotation(target.id, 'z', parseFloat(e.target.value))} />
             </label>
+          </div>
+
+          <div style={{ marginTop: 15, paddingTop: 15, borderTop: '1px solid #555' }}>
+            <strong style={{ fontSize: 14 }}>Action Sequencer</strong>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 10 }}>
+              <div style={{ display: 'flex', gap: 5 }}>
+                <button 
+                  onClick={() => useRigStore.getState().addActionToTarget(target.id, 'move')}
+                  style={{ flex: 1, padding: '5px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                >
+                  + Move Here
+                </button>
+                <button 
+                  onClick={() => useRigStore.getState().addActionToTarget(target.id, 'grip')}
+                  style={{ flex: 1, padding: '5px', background: '#FF9800', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                >
+                  + Grip Here
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: 5, marginTop: 5 }}>
+                <button 
+                  onClick={() => useRigStore.getState().setTargetAnimating(target.id, !target.isAnimating)}
+                  style={{ flex: 1, padding: '5px', background: target.isAnimating ? '#f44336' : '#2196F3', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer', opacity: target.actions?.length === 0 ? 0.5 : 1 }}
+                  disabled={!target.actions || target.actions.length === 0}
+                >
+                  {target.isAnimating ? 'Stop' : 'Play'}
+                </button>
+                <button 
+                  onClick={() => useRigStore.getState().clearTargetActions(target.id)}
+                  style={{ padding: '5px', background: '#757575', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+            
+            {target.actions && target.actions.length > 0 && (
+              <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 150, overflowY: 'auto', background: '#111', padding: 5, borderRadius: 4 }}>
+                {target.actions.map((action, idx) => {
+                  let label = "Unknown Action";
+                  if (action.type === 'move') {
+                    label = `Move to [${action.position?.x.toFixed(1)}, ${action.position?.y.toFixed(1)}, ${action.position?.z.toFixed(1)}]`;
+                  } else if (action.type === 'grip') {
+                    label = `Set Grip to ${action.gripAmount?.toFixed(2)}`;
+                  }
+                  
+                  return (
+                    <div key={action.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: target.currentActionIndex === idx ? '#444' : '#222', padding: 5, borderRadius: 3, fontSize: 12 }}>
+                      <span>{idx + 1}. {label}</span>
+                      <button 
+                        onClick={() => useRigStore.getState().removeActionFromTarget(target.id, idx)}
+                        style={{ background: 'transparent', color: '#ff4444', border: 'none', cursor: 'pointer' }}
+                      >
+                        X
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -10,6 +10,7 @@ import { InspectorPanel } from './ui/InspectorPanel';
 import { Toolbar } from './ui/Toolbar';
 import { RigTargetView } from './view/RigTargetView';
 import { IKManager } from './view/IKManager';
+import { AnimationManager } from './view/AnimationManager';
 
 export default function App() {
   // Inject mock nodes to prove the visualizer works
@@ -30,6 +31,7 @@ export default function App() {
       <Toolbar />
       <HierarchyTree />
       <InspectorPanel />
+      <AnimationManager />
       <Canvas 
         camera={{ position: [20, 20, 20], fov: 45 }} 
         style={{ width: '100vw', height: '100vh', display: 'block' }}

@@ -20,8 +20,8 @@ export interface IMeshParameters {
 export interface INode {
   id: string;
   name: string;
-  type?: "arm" | "gripper";
-  gripAmount?: number;
+  type?: "arm" | "gripper" | undefined;
+  gripAmount?: number | undefined;
   parentId: string | null;
   offset: ITransform; // static spatial offset from parent
   rotation: ITransform; // dynamic local joint angles (FK)
@@ -31,11 +31,24 @@ export interface INode {
   meshParameters: IMeshParameters;
 }
 
+export type ActionType = "move" | "grip";
+
+export interface IAction {
+  id: string; // Unique ID for React keys
+  type: ActionType;
+  position?: IVector3;
+  rotation?: IVector3;
+  gripAmount?: number;
+}
+
 export interface ITarget {
   id: string;
   position: IVector3;
   rotation: IVector3;
   endEffectorId: string | null; // the specific node this target drives via IK
+  actions: IAction[];
+  isAnimating: boolean;
+  currentActionIndex: number;
 }
 
 export interface IRigState {
