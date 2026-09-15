@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useRigStore } from '../state/rigStore';
 import { TransformControls } from '@react-three/drei';
+import { useFrame, useThree } from '@react-three/fiber';
+import * as THREE from 'three';
 
 import type { ITarget } from '../types';
 
@@ -33,7 +35,7 @@ export function RigTargetView() {
               onMouseUp={(e) => {
                 setIsDragging(false);
                 const targetObj = e?.target as any;
-                const newPos = targetObj?.object?.position;
+                const newPos = targetObj?.object?.position || targetObj?.position;
                 const newRot = targetObj?.object?.rotation;
                 if (newPos && controlMode === 'translate') {
                   setTargetPosition(target.id, { x: newPos.x, y: newPos.y, z: newPos.z });
@@ -45,7 +47,7 @@ export function RigTargetView() {
                 }
               }}
             >
-              <group
+              <mesh
                 name={target.id}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -54,32 +56,15 @@ export function RigTargetView() {
                   }
                 }}
               >
-                {/* Center point / Gizmo anchor (Where the arm connects) */}
-                <mesh>
-                  <sphereGeometry args={[0.5, 16, 16]} />
-                  <meshStandardMaterial color="red" emissive="red" emissiveIntensity={0.8} transparent opacity={0.8} />
-                </mesh>
-
-                {/* The Target's Joint */}
-                <mesh rotation={[Math.PI / 2, 0, 0]}>
-                  <cylinderGeometry args={[1, 1, 1, 32]} />
-                  <meshStandardMaterial color="#ffaa00" />
-                </mesh>
-
-                {/* The Target's Arm facing downwards  */}
-                <group position={[0, -2, 0]}>
-                  <mesh>
-                    <cylinderGeometry args={[0.5, 0.5, 4, 16]} />
-                    <meshStandardMaterial color="#aaaaaa" />
-                  </mesh>
-                </group>
-              </group>
+                <sphereGeometry args={[0.5, 16, 16]} />
+                <meshStandardMaterial color="red" emissive="red" emissiveIntensity={0.8} transparent opacity={0.8} />
+              </mesh>
             </TransformControls>
           );
         }
 
         return (
-          <group
+          <mesh
             key={target.id}
             name={target.id}
             position={[target.position.x, target.position.y, target.position.z]}
@@ -91,26 +76,9 @@ export function RigTargetView() {
               }
             }}
           >
-            {/* Center point / Gizmo anchor */}
-            <mesh>
-              <sphereGeometry args={[0.5, 16, 16]} />
-              <meshStandardMaterial color="red" emissive="red" emissiveIntensity={0.5} transparent opacity={0.8} />
-            </mesh>
-
-            {/* The Target's Joint */}
-            <mesh rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[1, 1, 1, 32]} />
-              <meshStandardMaterial color="#4488ff" />
-            </mesh>
-
-            {/* The Target's Arm facing downwards */}
-            <group position={[0, -2, 0]}>
-              <mesh>
-                <cylinderGeometry args={[0.5, 0.5, 4, 16]} />
-                <meshStandardMaterial color="#aaaaaa" />
-              </mesh>
-            </group>
-          </group>
+            <sphereGeometry args={[0.5, 16, 16]} />
+            <meshStandardMaterial color="red" emissive="red" emissiveIntensity={0.5} transparent opacity={0.8} />
+          </mesh>
         );
       })}
     </>

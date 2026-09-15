@@ -20,11 +20,14 @@ interface RigActions {
   setFollowTarget: (follow: boolean) => void;
   setMultipleNodeRotations: (updates: Record<string, IVector3>) => void;
   setIsDragging: (isDragging: boolean) => void;
+  setIsFkDragging: (isFkDragging: boolean) => void;
+  clearFkDirty: () => void;
 }
 
 const initialState: IRigState = {
   nodes: {},
   targets: {},
+  fkDirty: false,
   followTarget: true,
   controlMode: "translate",
   controlSpace: "world",
@@ -33,6 +36,7 @@ const initialState: IRigState = {
   selectedNodeId: null,
   selectedTargetId: null,
   isDragging: false,
+  isFkDragging: false,
 };
 
 export const useRigStore = create<IRigState & RigActions>((set) => ({
@@ -185,6 +189,7 @@ export const useRigStore = create<IRigState & RigActions>((set) => ({
       const clampedValue = Math.max(node.min, Math.min(node.max, value));
 
       return {
+        fkDirty: true,
         nodes: {
           ...state.nodes,
           [nodeId]: {
@@ -205,7 +210,35 @@ export const useRigStore = create<IRigState & RigActions>((set) => ({
     set((state) => {
       const node = state.nodes[nodeId];
       if (!node) return state;
+
+      // Calculate the delta of the movement
+      const delta = {
+        x: position.x - node.offset.position.x,
+        y: position.y - node.offset.position.y,
+        z: position.z - node.offset.position.z,
+      };
+
+      // If this arm translates, ALL connected targets must translate by the same amount to remain locked!
+      const newTargets = { ...state.targets };
+      let targetsUpdated = false;
+      for (const targetId in newTargets) {
+        const target = newTargets[targetId];
+        // If a target is assigned to any node, we assume it belongs to the arm being dragged
+        if (target.endEffectorId) {
+          newTargets[targetId] = {
+            ...target,
+            position: {
+              x: target.position.x + delta.x,
+              y: target.position.y + delta.y,
+              z: target.position.z + delta.z,
+            }
+          };
+          targetsUpdated = true;
+        }
+      }
+
       return {
+        ...(targetsUpdated ? { targets: newTargets } : {}),
         nodes: {
           ...state.nodes,
           [nodeId]: {
@@ -240,11 +273,9 @@ export const useRigStore = create<IRigState & RigActions>((set) => ({
     set((state) => {
       const newTargets = { ...state.targets };
       if (newTargets[targetId]) {
-        // When assigned, it becomes a child of the end effector, so reset its local offset to 0,0,0
         newTargets[targetId] = { 
           ...newTargets[targetId], 
-          endEffectorId,
-          position: endEffectorId ? { x: 0, y: 0, z: 0 } : newTargets[targetId].position
+          endEffectorId
         };
       }
       return { targets: newTargets };
@@ -304,6 +335,8 @@ export const useRigStore = create<IRigState & RigActions>((set) => ({
     }),
 
   setIsDragging: (isDragging: boolean) => set({ isDragging }),
+  setIsFkDragging: (isFkDragging: boolean) => set({ isFkDragging }),
+  clearFkDirty: () => set({ fkDirty: false }),
 
   reset: () => set(() => initialState),
 }));

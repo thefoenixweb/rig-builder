@@ -12,6 +12,13 @@ export class IKSolver {
   private nodeObjects: Map<string, Object3D> = new Map();
   // We use a dummy tip object to represent the actual end effector position
   private tipObjects: Map<string, Object3D> = new Map();
+  private lastUpdateTime: number = 0;
+  // Accumulates uncommitted rotations so the solver doesn't reset when we throttle React
+  private internalRotations: Map<string, IVector3> = new Map();
+
+  public clearInternalRotations() {
+    this.internalRotations.clear();
+  }
 
   private buildVirtualGraph(state: IRigState) {
     this.rootObjects.clear();
@@ -20,30 +27,27 @@ export class IKSolver {
 
     const nodes = Object.values(state.nodes);
 
-    // Create an Object3D for every node
     nodes.forEach(node => {
       const obj = new Object3D();
       obj.name = node.id;
       this.nodeObjects.set(node.id, obj);
 
       const tipObj = new Object3D();
-      tipObj.position.set(0, node.offset.scale.y, 0); // Children attach here
+      tipObj.position.set(0, node.offset.scale.y, 0);
       obj.add(tipObj);
       this.tipObjects.set(node.id, tipObj);
     });
 
-    // Assemble hierarchy
     nodes.forEach(node => {
       const obj = this.nodeObjects.get(node.id)!;
 
       if (node.parentId) {
         const parentTip = this.tipObjects.get(node.parentId);
         if (parentTip) {
-          parentTip.add(obj); // Child attaches to parent's tip
-          obj.position.set(0, 0, 0); // No local translation for children
+          parentTip.add(obj);
+          obj.position.set(0, 0, 0);
         }
       } else {
-        // Root node
         obj.position.set(node.offset.position.x, node.offset.position.y, node.offset.position.z);
         this.rootObjects.set(node.id, obj);
       }
@@ -54,7 +58,6 @@ export class IKSolver {
       obj.rotation.set(rot.x + off.x, rot.y + off.y, rot.z + off.z, "XYZ");
     });
 
-    // Update all world matrices
     this.rootObjects.forEach(root => root.updateMatrixWorld(true));
   }
 
@@ -76,17 +79,15 @@ export class IKSolver {
       const effectorObj = this.tipObjects.get(target.endEffectorId);
       if (!effectorObj) return;
 
-      // targetPos is now in World Space directly
       let targetPos = new Vector3(target.position.x, target.position.y, target.position.z);
       
-      if (scene) {
+      if (scene && state.isDragging) {
         const targetMesh = scene.getObjectByName(target.id);
         if (targetMesh) {
           targetMesh.getWorldPosition(targetPos);
         }
       }
 
-      // Build chain from end effector up to root
       const chain: string[] = [];
       let currentId: string | null = target.endEffectorId;
       while (currentId) {
@@ -111,14 +112,12 @@ export class IKSolver {
           const effectorVec = endEffectorWorldPos.clone().sub(jointWorldPos).normalize();
           const targetVec = targetPos.clone().sub(jointWorldPos).normalize();
 
-          // Calculate rotation needed to align effector with target
           const angle = effectorVec.angleTo(targetVec);
           if (angle < 0.001) continue;
 
           const cross = new Vector3().crossVectors(effectorVec, targetVec).normalize();
           const rotationQuat = new Quaternion().setFromAxisAngle(cross, angle);
 
-          // Apply rotation in world space, convert back to local space
           const parentQuat = new Quaternion();
           if (jointObj.parent) {
             jointObj.parent.getWorldQuaternion(parentQuat);
@@ -127,26 +126,22 @@ export class IKSolver {
           const qNewLocal = parentQuatInv.multiply(rotationQuat).multiply(parentQuat).multiply(jointObj.quaternion);
           jointObj.quaternion.copy(qNewLocal);
 
-          // Constrain angles based on node state
           const localEuler = new Euler().setFromQuaternion(jointObj.quaternion, "XYZ");
 
-          // Remove static offset to get dynamic FK rotation
           let rotX = localEuler.x - nodeState.offset.rotation.x;
           let rotY = localEuler.y - nodeState.offset.rotation.y;
           let rotZ = localEuler.z - nodeState.offset.rotation.z;
 
-          // Enforce constraints and limits
           if (nodeState.constraint === "spinner") {
-            rotX = nodeState.rotation.rotation.x; // Lock X
-            rotZ = nodeState.rotation.rotation.z; // Lock Z
+            rotX = nodeState.rotation.rotation.x;
+            rotZ = nodeState.rotation.rotation.z;
             rotY = Math.max(nodeState.min, Math.min(nodeState.max, rotY));
           } else if (nodeState.constraint === "bender") {
-            rotX = nodeState.rotation.rotation.x; // Lock X
-            rotY = nodeState.rotation.rotation.y; // Lock Y
+            rotX = nodeState.rotation.rotation.x;
+            rotY = nodeState.rotation.rotation.y;
             rotZ = Math.max(nodeState.min, Math.min(nodeState.max, rotZ));
           }
 
-          // Apply constrained rotation back to joint object
           jointObj.rotation.set(
             rotX + nodeState.offset.rotation.x,
             rotY + nodeState.offset.rotation.y,
@@ -156,8 +151,14 @@ export class IKSolver {
 
           jointObj.updateMatrixWorld(true);
 
-          finalRotations[nodeId] = { x: rotX, y: rotY, z: rotZ };
-          anyUpdates = true;
+          const dx = Math.abs(rotX - nodeState.rotation.rotation.x);
+          const dy = Math.abs(rotY - nodeState.rotation.rotation.y);
+          const dz = Math.abs(rotZ - nodeState.rotation.rotation.z);
+          
+          if (dx > 0.001 || dy > 0.001 || dz > 0.001) {
+            finalRotations[nodeId] = { x: rotX, y: rotY, z: rotZ };
+            anyUpdates = true;
+          }
         }
       }
     });

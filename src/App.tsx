@@ -14,28 +14,15 @@ import { IKManager } from './view/IKManager';
 export default function App() {
   // Inject mock nodes to prove the visualizer works
   useEffect(() => {
-    const store = useRigStore.getState();
-    if (Object.keys(store.nodes).length === 0) {
-      store.addNode('root', { x: 0, y: 0, z: 0 });
-
-      // We will just artificially set the link scale of the root so it draws a 10 unit arm
-      useRigStore.setState(state => {
-        const rootNode = state.nodes['root'];
-        if (!rootNode) return state;
-        return {
-          nodes: {
-            ...state.nodes,
-            'root': {
-              ...rootNode,
-              offset: {
-                ...rootNode.offset,
-                scale: { x: 1, y: 5, z: 1 }
-              }
-            }
-          }
-        };
-      });
-    }
+    // Global fail-safe to prevent isDragging from getting permanently stuck 
+    // if the user releases the mouse outside the canvas!
+    const handlePointerUp = () => {
+      if (useRigStore.getState().isDragging) {
+        useRigStore.getState().setIsDragging(false);
+      }
+    };
+    window.addEventListener('pointerup', handlePointerUp);
+    return () => window.removeEventListener('pointerup', handlePointerUp);
   }, []);
 
   return (
@@ -66,8 +53,8 @@ export default function App() {
         />
 
         <RigVisualizer />
-        <RigTargetView />
         <IKManager />
+        <RigTargetView />
 
         <OrbitControls makeDefault />
       </Canvas>

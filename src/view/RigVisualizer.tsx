@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { useRigStore } from '../state/rigStore';
 import { TransformControls } from '@react-three/drei';
 import type { INode } from '../types';
+import { useThree } from '@react-three/fiber';
+import * as THREE from 'three';
 
 const RigNodeView = ({ node, allNodes }: { node: INode, allNodes: INode[] }) => {
   const stateSelectedId = useRigStore(state => state.selectedNodeId);
@@ -44,9 +46,7 @@ const RigNodeView = ({ node, allNodes }: { node: INode, allNodes: INode[] }) => 
       rotation={totalRotation}
       onClick={(e) => {
         e.stopPropagation();
-        if (!useRigStore.getState().isDragging) {
-          useRigStore.getState().setSelectedNode(node.id);
-        }
+        useRigStore.getState().setSelectedNode(node.id);
       }}
     >
       {/* The Joint (Pivot point) */}
@@ -84,9 +84,7 @@ const RigNodeView = ({ node, allNodes }: { node: INode, allNodes: INode[] }) => 
         key={`tc-${node.id}`} 
         mode="translate"
         position={[position.x, position.y, position.z]}
-        onMouseDown={() => useRigStore.getState().setIsDragging(true)}
         onMouseUp={(e) => {
-          useRigStore.getState().setIsDragging(false);
           const target = e?.target as any;
           const newPos = target?.object?.position || target?.position;
           if (newPos) {
@@ -105,6 +103,31 @@ const RigNodeView = ({ node, allNodes }: { node: INode, allNodes: INode[] }) => 
 export function RigVisualizer() {
   const nodes = useRigStore((state) => Object.values(state.nodes));
   const rootNodes = nodes.filter(n => n.parentId === null);
+  const { scene } = useThree();
+
+  useEffect(() => {
+    const state = useRigStore.getState();
+    if (state.fkDirty && !state.isDragging) {
+      // Because this useEffect runs AFTER React commits the render, we are GUARANTEED
+      // that the Three.js joint meshes already possess the newly updated rotations.
+      scene.updateMatrixWorld(true);
+
+      const setTargetPosition = useRigStore.getState().setTargetPosition;
+      const targets = Object.values(state.targets);
+      
+      targets.forEach(target => {
+        if (!target.endEffectorId) return;
+        const tipObj = scene.getObjectByName(`tip-${target.endEffectorId}`);
+        if (tipObj) {
+          const tempVec = new THREE.Vector3();
+          tipObj.getWorldPosition(tempVec);
+          setTargetPosition(target.id, { x: tempVec.x, y: tempVec.y, z: tempVec.z });
+        }
+      });
+
+      useRigStore.getState().clearFkDirty();
+    }
+  }); // Runs after every render
 
   return (
     <>

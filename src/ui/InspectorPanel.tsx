@@ -13,6 +13,7 @@ export function InspectorPanel() {
   const assignTarget = useRigStore(state => state.assignTarget);
   const setTargetPosition = useRigStore(state => state.setTargetPosition);
   const setTargetRotation = useRigStore(state => state.setTargetRotation);
+  const setIsFkDragging = useRigStore(state => state.setIsFkDragging);
 
   const nodeList = Object.values(nodes);
   const targetList = Object.values(targets);
@@ -74,6 +75,8 @@ export function InspectorPanel() {
                 min={node.min} max={node.max} step={0.01}
                 value={node.rotation.rotation.x}
                 onChange={e => setNodeRotation(node.id, 'x', parseFloat(e.target.value))}
+                onPointerDown={() => setIsFkDragging(true)}
+                onPointerUp={() => setIsFkDragging(false)}
                 disabled={node.constraint === 'spinner' || node.constraint === 'bender'}
               />
             </label>
@@ -85,6 +88,8 @@ export function InspectorPanel() {
                 min={node.min} max={node.max} step={0.01}
                 value={node.rotation.rotation.y}
                 onChange={e => setNodeRotation(node.id, 'y', parseFloat(e.target.value))}
+                onPointerDown={() => setIsFkDragging(true)}
+                onPointerUp={() => setIsFkDragging(false)}
                 disabled={node.constraint === 'bender'}
               />
             </label>
@@ -96,6 +101,8 @@ export function InspectorPanel() {
                 min={node.min} max={node.max} step={0.01}
                 value={node.rotation.rotation.z}
                 onChange={e => setNodeRotation(node.id, 'z', parseFloat(e.target.value))}
+                onPointerDown={() => setIsFkDragging(true)}
+                onPointerUp={() => setIsFkDragging(false)}
                 disabled={node.constraint === 'spinner'}
               />
             </label>

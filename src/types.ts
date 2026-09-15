@@ -39,6 +39,7 @@ export interface ITarget {
 export interface IRigState {
   nodes: Record<string, INode>;
   targets: Record<string, ITarget>;
+  fkDirty?: boolean;
   selectedNodeId: string | null;
   selectedTargetId: string | null;
   followTarget: boolean;
@@ -47,4 +48,5 @@ export interface IRigState {
   eulerRingsVisible: boolean;
   controlVisible: boolean;
   isDragging: boolean;
+  isFkDragging: boolean;
 }
