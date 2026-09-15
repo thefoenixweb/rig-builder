@@ -15,7 +15,7 @@ export function HierarchyTree() {
   const handleAddNode = () => {
     const id = `node_${Date.now().toString().slice(-4)}`;
     const nodeCount = Object.keys(nodes).length;
-    addNode(id, { x: nodeCount * 5, y: 0, z: 0 });
+    addNode(id, { x: nodeCount * 5, y: 0, z: 0 }, "arm");
 
     useRigStore.setState(state => {
       const newNode = state.nodes[id];
@@ -36,6 +36,30 @@ export function HierarchyTree() {
     });
   };
 
+  const handleAddGripper = () => {
+    const id = `gripper_${Date.now().toString().slice(-4)}`;
+    const nodeCount = Object.keys(nodes).length;
+    addNode(id, { x: nodeCount * 5, y: 0, z: 0 }, "gripper");
+    
+    useRigStore.setState(state => {
+      const newNode = state.nodes[id];
+      if (!newNode) return state;
+      return {
+        nodes: {
+          ...state.nodes,
+          [id]: {
+            ...newNode,
+            offset: {
+              ...newNode.offset,
+              scale: { x: 1, y: 2, z: 1 }
+            },
+            constraint: 'spinner'
+          }
+        }
+      };
+    });
+  };
+
   const nodeList = Object.values(nodes);
 
   return (
@@ -43,12 +67,15 @@ export function HierarchyTree() {
       <h3 style={{ margin: 0 }}>Hierarchy Tree</h3>
       <hr style={{ width: '100%', borderColor: '#555', margin: 0 }} />
       
-      <div style={{ display: 'flex', gap: 10 }}>
-        <select style={{ color: 'black' }} value={constraint} onChange={e => setConstraint(e.target.value as any)}>
-          <option value="bender">Bender</option>
-          <option value="spinner">Spinner</option>
-        </select>
-        <button onClick={handleAddNode} style={{ color: 'black', cursor: 'pointer' }}>Spawn Node</button>
+      <div style={{ display: 'flex', gap: 10, flexDirection: 'column' }}>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <select style={{ color: 'black' }} value={constraint} onChange={e => setConstraint(e.target.value as any)}>
+            <option value="bender">Bender</option>
+            <option value="spinner">Spinner</option>
+          </select>
+          <button onClick={handleAddNode} style={{ color: 'black', cursor: 'pointer', flex: 1 }}>Spawn Arm</button>
+        </div>
+        <button onClick={handleAddGripper} style={{ color: 'black', cursor: 'pointer', background: '#ffaa00', border: 'none', padding: 5, borderRadius: 3 }}>Spawn Gripper</button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>

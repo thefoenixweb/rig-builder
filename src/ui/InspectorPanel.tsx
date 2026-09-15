@@ -68,6 +68,21 @@ export function InspectorPanel() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 5 }}>
+            {node.type === "gripper" && (
+              <label style={{ display: 'flex', flexDirection: 'column', fontSize: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <span>Grip Amount (Close &rarr; Open)</span>
+                  <span>{(node.gripAmount ?? 0).toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min={0} max={1} step={0.01}
+                  value={node.gripAmount ?? 0}
+                  onChange={e => useRigStore.getState().setGripAmount(node.id, parseFloat(e.target.value))}
+                />
+              </label>
+            )}
+
             <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, opacity: node.constraint === 'spinner' || node.constraint === 'bender' ? 0.3 : 1 }}>
               <span>X: {(node.rotation.rotation.x * 180 / Math.PI).toFixed(1)}°</span>
               <input

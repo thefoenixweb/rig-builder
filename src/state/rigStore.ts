@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { IRigState, INode, IVector3 } from "../types.ts";
 
 interface RigActions {
-  addNode: (id: string, position: IVector3) => void;
+  addNode: (id: string, position: IVector3, type?: "arm" | "gripper") => void;
   removeNode: (nodeId: string) => void;
   parentNode: (childId: string, parentId: string) => void;
   unparentNode: (nodeId: string) => void;
@@ -22,6 +22,7 @@ interface RigActions {
   setIsDragging: (isDragging: boolean) => void;
   setIsFkDragging: (isFkDragging: boolean) => void;
   clearFkDirty: () => void;
+  setGripAmount: (nodeId: string, amount: number) => void;
 }
 
 const initialState: IRigState = {
@@ -42,22 +43,24 @@ const initialState: IRigState = {
 export const useRigStore = create<IRigState & RigActions>((set) => ({
   ...initialState,
 
-  addNode: (id: string, position: IVector3) =>
+  addNode: (id: string, position: IVector3, type: "arm" | "gripper" = "arm") =>
     set((state) => {
       const newNode: INode = {
         id,
         name: id,
+        type,
+        gripAmount: type === "gripper" ? 0 : undefined,
         parentId: null,
         offset: { position, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
         rotation: { position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
-        constraint: "bender", // Default to bender
+        constraint: type === "gripper" ? "spinner" : "bender", // Grippers default to spinner, arms to bender
         min: -Math.PI,
         max: Math.PI,
         meshParameters: {
-          jointRadius: 1,
-          jointThickness: 1,
-          armRadius: 0.5,
-          color: "#aaaaaa"
+          jointRadius: type === "gripper" ? 0.5 : 1,
+          jointThickness: type === "gripper" ? 0.5 : 1,
+          armRadius: type === "gripper" ? 0.3 : 0.5,
+          color: type === "gripper" ? "#ffaa00" : "#aaaaaa"
         }
       };
       return { nodes: { ...state.nodes, [id]: newNode } };
@@ -337,6 +340,17 @@ export const useRigStore = create<IRigState & RigActions>((set) => ({
   setIsDragging: (isDragging: boolean) => set({ isDragging }),
   setIsFkDragging: (isFkDragging: boolean) => set({ isFkDragging }),
   clearFkDirty: () => set({ fkDirty: false }),
+  setGripAmount: (nodeId: string, amount: number) =>
+    set((state) => {
+      const node = state.nodes[nodeId];
+      if (!node || node.type !== "gripper") return state;
+      return {
+        nodes: {
+          ...state.nodes,
+          [nodeId]: { ...node, gripAmount: amount }
+        }
+      };
+    }),
 
   reset: () => set(() => initialState),
 }));

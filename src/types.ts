@@ -20,6 +20,8 @@ export interface IMeshParameters {
 export interface INode {
   id: string;
   name: string;
+  type?: "arm" | "gripper";
+  gripAmount?: number;
   parentId: string | null;
   offset: ITransform; // static spatial offset from parent
   rotation: ITransform; // dynamic local joint angles (FK)

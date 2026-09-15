@@ -39,16 +39,44 @@ const RigNodeView = ({ node, allNodes }: { node: INode, allNodes: INode[] }) => 
 
   const children = allNodes.filter(n => n.parentId === node.id);
 
-  const nodeGroup = (
-    <group
-      key={node.id}
-      {...(canTranslate ? (!isSelected ? { position: [position.x, position.y, position.z] } : {}) : { position: [0, 0, 0] })}
-      rotation={totalRotation}
-      onClick={(e) => {
-        e.stopPropagation();
-        useRigStore.getState().setSelectedNode(node.id);
-      }}
-    >
+  const isGripper = node.type === "gripper";
+  const gripAmount = node.gripAmount ?? 0;
+  
+  // A simple procedural gripper: a base box and two sliding claws
+  const gripperGroup = (
+    <group>
+      {/* The Joint (Pivot point) */}
+      <mesh rotation={jointRotation}>
+        <cylinderGeometry args={[params.jointRadius, params.jointRadius, params.jointThickness, 32]} />
+        <meshStandardMaterial color={isSelected ? "#ffaa00" : "#4488ff"} />
+      </mesh>
+
+      {/* Base of the gripper */}
+      <mesh position={[0, length * 0.25, 0]}>
+        <boxGeometry args={[params.jointRadius * 2.5, length * 0.5, params.jointRadius * 1.5]} />
+        <meshStandardMaterial color={isSelected ? "#ffaa00" : "#333"} />
+      </mesh>
+      
+      {/* Left Claw */}
+      <group position={[-params.jointRadius * 0.8 + gripAmount * 0.4, length * 0.75, 0]}>
+        <mesh>
+          <boxGeometry args={[0.2, length * 0.5, 0.4]} />
+          <meshStandardMaterial color={params.color} />
+        </mesh>
+      </group>
+      
+      {/* Right Claw */}
+      <group position={[params.jointRadius * 0.8 - gripAmount * 0.4, length * 0.75, 0]}>
+        <mesh>
+          <boxGeometry args={[0.2, length * 0.5, 0.4]} />
+          <meshStandardMaterial color={params.color} />
+        </mesh>
+      </group>
+    </group>
+  );
+
+  const armGroup = (
+    <>
       {/* The Joint (Pivot point) */}
       <mesh rotation={jointRotation}>
         <cylinderGeometry args={[params.jointRadius, params.jointRadius, params.jointThickness, 32]} />
@@ -68,6 +96,20 @@ const RigNodeView = ({ node, allNodes }: { node: INode, allNodes: INode[] }) => 
           <meshStandardMaterial color="#333333" />
         </mesh>
       </group>
+    </>
+  );
+
+  const nodeGroup = (
+    <group
+      key={node.id}
+      {...(canTranslate ? (!isSelected ? { position: [position.x, position.y, position.z] } : {}) : { position: [0, 0, 0] })}
+      rotation={totalRotation}
+      onClick={(e) => {
+        e.stopPropagation();
+        useRigStore.getState().setSelectedNode(node.id);
+      }}
+    >
+      {isGripper ? gripperGroup : armGroup}
 
       {/* Render children at the TIP of the arm so they are mechanically attached */}
       <group position={[0, length, 0]} name={`tip-${node.id}`}>
