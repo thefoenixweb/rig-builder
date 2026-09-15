@@ -112,34 +112,54 @@ export class IKSolver {
           const effectorVec = endEffectorWorldPos.clone().sub(jointWorldPos).normalize();
           const targetVec = targetPos.clone().sub(jointWorldPos).normalize();
 
-          const angle = effectorVec.angleTo(targetVec);
-          if (angle < 0.001) continue;
-
-          const cross = new Vector3().crossVectors(effectorVec, targetVec).normalize();
-          const rotationQuat = new Quaternion().setFromAxisAngle(cross, angle);
-
-          const parentQuat = new Quaternion();
-          if (jointObj.parent) {
-            jointObj.parent.getWorldQuaternion(parentQuat);
+          let localAxis = new Vector3();
+          if (nodeState.constraint === "spinner") {
+            localAxis.set(0, 1, 0);
+          } else if (nodeState.constraint === "bender") {
+            localAxis.set(0, 0, 1);
           }
-          const parentQuatInv = parentQuat.clone().invert();
-          const qNewLocal = parentQuatInv.multiply(rotationQuat).multiply(parentQuat).multiply(jointObj.quaternion);
-          jointObj.quaternion.copy(qNewLocal);
 
-          const localEuler = new Euler().setFromQuaternion(jointObj.quaternion, "XYZ");
+          // Transform local axis to world direction
+          const worldAxis = localAxis.clone().transformDirection(jointObj.matrixWorld).normalize();
 
-          let rotX = localEuler.x - nodeState.offset.rotation.x;
-          let rotY = localEuler.y - nodeState.offset.rotation.y;
-          let rotZ = localEuler.z - nodeState.offset.rotation.z;
+          // Project vectors onto the plane perpendicular to the rotation axis
+          const effectorProjected = effectorVec.clone().sub(worldAxis.clone().multiplyScalar(effectorVec.dot(worldAxis)));
+          const targetProjected = targetVec.clone().sub(worldAxis.clone().multiplyScalar(targetVec.dot(worldAxis)));
+
+          if (effectorProjected.lengthSq() < 0.0001 || targetProjected.lengthSq() < 0.0001) {
+            continue;
+          }
+
+          effectorProjected.normalize();
+          targetProjected.normalize();
+
+          const y = new Vector3().crossVectors(effectorProjected, targetProjected).dot(worldAxis);
+          const x = effectorProjected.dot(targetProjected);
+          const angleDelta = Math.atan2(y, x);
+
+          if (Math.abs(angleDelta) < 0.001) continue;
+
+          let rotX = nodeState.rotation.rotation.x;
+          let rotY = jointObj.rotation.y - nodeState.offset.rotation.y;
+          let rotZ = jointObj.rotation.z - nodeState.offset.rotation.z;
+
+          const applyBoundedRotation = (current: number, delta: number, min: number, max: number) => {
+            let next = current + delta;
+            // Check if unwinding 360 degrees puts us in bounds
+            if (next > max && next - 2 * Math.PI >= min) {
+              next -= 2 * Math.PI;
+            } else if (next < min && next + 2 * Math.PI <= max) {
+              next += 2 * Math.PI;
+            }
+            return Math.max(min, Math.min(max, next));
+          };
 
           if (nodeState.constraint === "spinner") {
-            rotX = nodeState.rotation.rotation.x;
+            rotY = applyBoundedRotation(rotY, angleDelta, nodeState.min, nodeState.max);
             rotZ = nodeState.rotation.rotation.z;
-            rotY = Math.max(nodeState.min, Math.min(nodeState.max, rotY));
           } else if (nodeState.constraint === "bender") {
-            rotX = nodeState.rotation.rotation.x;
+            rotZ = applyBoundedRotation(rotZ, angleDelta, nodeState.min, nodeState.max);
             rotY = nodeState.rotation.rotation.y;
-            rotZ = Math.max(nodeState.min, Math.min(nodeState.max, rotZ));
           }
 
           jointObj.rotation.set(
